@@ -2,6 +2,7 @@ from datetime import datetime
 from enum import Enum
 import db_connection as db
 import pygame
+import pygame_menu
 import random
 
 
@@ -163,18 +164,24 @@ class Food:
 
 
 class Game:
+    class Level(Enum):
+        EASY = 1
+        MEDIUM = 2
+        HARD = 4
+
     MOVEEVENT = pygame.USEREVENT + 1
 
-    def __init__(self) -> None:
+    def __init__(self, level: Level) -> None:
         self._field = Field((20, 20))
         self._snake = Snake(self._field)
         self._food = Food(self._field, self._snake)
+        self._level = level
 
     def change_snake_direction(self, dir: Direction):
         self._snake.change_direction(dir)
 
     def get_score(self) -> int:
-        return len(self._snake)
+        return len(self._snake) * self._level.value
 
     def move(self) -> bool:
         self._snake.move(self._food.pos)
@@ -194,18 +201,22 @@ class Game:
         self._food.draw(screen)
 
 
-def main():
-    random.seed(datetime.now().microsecond)
-    db_conn = db.DbConnection()
-    print(db_conn.getHighestScores())
+class Settings:
+    def __init__(self) -> None:
+        self.level = Game.Level.EASY
 
-    pygame.init()
-    screen = pygame.display.set_mode((800, 800))
+    def set_level(self, level: Game.Level) -> None:
+        self.level = level
+
+
+settings = Settings()
+
+
+def run_game(screen: pygame.Surface) -> None:
     clock = pygame.time.Clock()
     running = True
-    game = Game()
-
-    pygame.time.set_timer(Game.MOVEEVENT, 100)
+    game = Game(settings.level)
+    pygame.time.set_timer(Game.MOVEEVENT, 250 // settings.level.value)
 
     while running:
         for event in pygame.event.get():
@@ -229,6 +240,32 @@ def main():
 
     print("Game finished. Score: {}".format(game.get_score()))
     pygame.quit()
+
+
+def show_menu(screen: pygame.Surface) -> None:
+    menu = pygame_menu.Menu("Start game", 400, 300)
+    menu.add.selector(
+        "Level: ",
+        [
+            ("Easy", Game.Level.EASY),
+            ("Medium", Game.Level.MEDIUM),
+            ("Hard", Game.Level.HARD),
+        ],
+        onchange=lambda _, level: settings.set_level(level),
+    )
+    menu.add.button("Play", lambda: run_game(screen))
+    menu.add.button("Quit", pygame_menu.events.EXIT)
+    menu.mainloop(screen)
+
+
+def main() -> None:
+    random.seed(datetime.now().microsecond)
+    db_conn = db.DbConnection()
+    print(db_conn.getHighestScores())
+
+    pygame.init()
+    screen = pygame.display.set_mode((800, 800))
+    show_menu(screen)
 
 
 if __name__ == "__main__":
