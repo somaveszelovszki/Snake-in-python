@@ -48,6 +48,38 @@ def direction(key: int) -> Direction:
             return None
 
 
+class DirectionQueue:
+    def __init__(self, current: Direction) -> None:
+        self._current = current
+        self._queue = []
+
+    def push(self, dir: Direction) -> None:
+        if dir != None:
+            self._queue.append(dir)
+
+    def pop(self) -> Direction:
+        if self._queue:
+            last_idx = self._get_last_valid_index()
+            if last_idx != None:
+                self._current = self._queue[last_idx]
+                del self._queue[: last_idx + 1]
+
+        return self._current
+
+    def _get_last_valid_index(self) -> int:
+        try:
+            return next(
+                (len(self._queue) - i - 1)
+                for i, dir in enumerate(self._queue[::-1])
+                if dir.axis() != self._current.axis()
+            )
+        except:
+            return None
+
+    def __str__(self) -> str:
+        return '{{ "current": {}, "queue": {} }}'.format(self._current, self._queue)
+
+
 class Field:
     def __init__(self, size: tuple) -> None:
         self.size = size
@@ -72,22 +104,22 @@ class Snake:
     def __init__(self, field: Field) -> None:
         self.field = field
         self._blocks = [(field.size[0] // 2, field.size[1] // 2)]
-        self._dir = random.choice(list(Direction))
+        self._dir_queue = DirectionQueue(random.choice(list(Direction)))
         print("Snake created: {}".format(self))
+
+    def change_direction(self, dir: Direction):
+        self._dir_queue.push(dir)
 
     def move(self, grow: bool = False):
         new_head_pos = self.field.get_overflow_position(
-            self._dir.apply(self._blocks[0])
+            self._dir_queue.pop().apply(self._blocks[0])
         )
+
         self._blocks.insert(0, new_head_pos)
         if not grow:
             self._blocks.pop()
-        print("Snake moved: {}".format(self))
 
-    def change_direction(self, dir: Direction):
-        if self._dir.axis() != dir.axis():
-            self._dir = dir
-            print("Snake direction changed: {}".format(self._dir))
+        print("Snake moved: {}".format(self))
 
     def head(self) -> tuple:
         return tuple(list(self._blocks[0]))
@@ -106,7 +138,9 @@ class Snake:
         return pos in self._blocks
 
     def __str__(self) -> str:
-        return '{{ "blocks": {}, "dir": {} }}'.format(self._blocks, self._dir.name)
+        return '{{ "blocks": {}, "dir_queue": {} }}'.format(
+            self._blocks, self._dir_queue
+        )
 
 
 class Food:
@@ -132,24 +166,24 @@ class Game:
     MOVEEVENT = pygame.USEREVENT + 1
 
     def __init__(self) -> None:
-        self.field = Field((20, 20))
-        self.snake = Snake(self.field)
-        self.food = Food(self.field, self.snake)
+        self._field = Field((20, 20))
+        self._snake = Snake(self._field)
+        self._food = Food(self._field, self._snake)
+
+    def change_snake_direction(self, dir: Direction):
+        self._snake.change_direction(dir)
 
     def move(self):
-        food_reached = self.food.pos in self.snake
-        self.snake.move(grow=food_reached)
+        food_reached = self._food.pos in self._snake
+        self._snake.move(grow=food_reached)
 
         if food_reached:
-            self.food.respawn()
-
-    def change_snake_direction(self, dir):
-        self.snake.change_direction(dir)
+            self._food.respawn()
 
     def render(self, screen: pygame.Surface):
-        self.field.draw(screen)
-        self.snake.draw(screen)
-        self.food.draw(screen)
+        self._field.draw(screen)
+        self._snake.draw(screen)
+        self._food.draw(screen)
 
 
 def main():
