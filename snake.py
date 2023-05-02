@@ -54,8 +54,7 @@ class DirectionQueue:
         self._queue = []
 
     def push(self, dir: Direction) -> None:
-        if dir != None:
-            self._queue.append(dir)
+        self._queue.append(dir)
 
     def pop(self) -> Direction:
         if self._queue:
