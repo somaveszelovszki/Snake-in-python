@@ -119,8 +119,6 @@ class Snake:
         if not grow:
             self._blocks.pop()
 
-        print("Snake moved: {}".format(self))
-
     def head(self) -> tuple:
         return tuple(list(self._blocks[0]))
 
