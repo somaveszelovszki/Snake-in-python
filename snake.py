@@ -109,21 +109,20 @@ class Snake:
     def change_direction(self, dir: Direction):
         self._dir_queue.push(dir)
 
-    def move(self, food_pos: tuple) -> bool:
+    def move(self, food_pos: tuple) -> None:
         new_head_pos = self.field.get_overflow_position(
             self._dir_queue.pop().apply(self._blocks[0])
         )
 
-        food_reached = new_head_pos == food_pos
-
         self._blocks.insert(0, new_head_pos)
-        if not food_reached:
+        if new_head_pos != food_pos:
             self._blocks.pop()
-
-        return food_reached
 
     def head(self) -> tuple:
         return tuple(list(self._blocks[0]))
+
+    def has_loop(self) -> bool:
+        return self.head() in self._blocks[1 : len(self._blocks)]
 
     def __len__(self) -> int:
         return len(self._blocks)
@@ -174,11 +173,17 @@ class Game:
     def change_snake_direction(self, dir: Direction):
         self._snake.change_direction(dir)
 
-    def move(self):
-        food_reached = self._snake.move(self._food.pos)
+    def move(self) -> bool:
+        self._snake.move(self._food.pos)
 
-        if food_reached:
+        if self._snake.has_loop():
+            print("Snake has a loop")
+            return False
+
+        if self._food.pos == self._snake.head():
             self._food.respawn()
+
+        return True
 
     def render(self, screen: pygame.Surface):
         self._field.draw(screen)
@@ -211,7 +216,9 @@ def main():
                         game.change_snake_direction(dir)
 
                 case Game.MOVEEVENT:
-                    game.move()
+                    success = game.move()
+                    if not success:
+                        running = False
 
         game.render(screen)
         pygame.display.flip()
