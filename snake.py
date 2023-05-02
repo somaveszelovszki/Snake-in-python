@@ -173,6 +173,9 @@ class Game:
     def change_snake_direction(self, dir: Direction):
         self._snake.change_direction(dir)
 
+    def get_score(self) -> int:
+        return len(self._snake)
+
     def move(self) -> bool:
         self._snake.move(self._food.pos)
 
@@ -224,6 +227,7 @@ def main():
         pygame.display.flip()
         clock.tick(30)
 
+    print("Game finished. Score: {}".format(game.get_score()))
     pygame.quit()
 
 
