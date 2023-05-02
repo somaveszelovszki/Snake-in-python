@@ -204,9 +204,13 @@ class Game:
 class Settings:
     def __init__(self) -> None:
         self.level = Game.Level.EASY
+        self.player_name = ""
 
     def set_level(self, level: Game.Level) -> None:
         self.level = level
+
+    def set_player_name(self, name: str) -> None:
+        self.player_name = name
 
 
 settings = Settings()
@@ -244,6 +248,9 @@ def run_game(screen: pygame.Surface) -> None:
 
 def show_menu(screen: pygame.Surface) -> None:
     menu = pygame_menu.Menu("Start game", 400, 300)
+    menu.add.text_input(
+        "Player: ", onchange=lambda text: settings.set_player_name(text)
+    )
     menu.add.selector(
         "Level: ",
         [
