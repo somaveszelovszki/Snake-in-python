@@ -109,14 +109,18 @@ class Snake:
     def change_direction(self, dir: Direction):
         self._dir_queue.push(dir)
 
-    def move(self, grow: bool = False):
+    def move(self, food_pos: tuple) -> bool:
         new_head_pos = self.field.get_overflow_position(
             self._dir_queue.pop().apply(self._blocks[0])
         )
 
+        food_reached = new_head_pos == food_pos
+
         self._blocks.insert(0, new_head_pos)
-        if not grow:
+        if not food_reached:
             self._blocks.pop()
+
+        return food_reached
 
     def head(self) -> tuple:
         return tuple(list(self._blocks[0]))
@@ -171,8 +175,7 @@ class Game:
         self._snake.change_direction(dir)
 
     def move(self):
-        food_reached = self._food.pos in self._snake
-        self._snake.move(grow=food_reached)
+        food_reached = self._snake.move(self._food.pos)
 
         if food_reached:
             self._food.respawn()
