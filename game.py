@@ -3,6 +3,14 @@ import pygame
 import random
 
 
+class Color(Enum):
+    WHITE = (255, 255, 255)
+    BLACK = (0, 0, 0)
+    RED = (255, 0, 0)
+    GREEN = (0, 255, 0)
+    BLUE = (0, 0, 255)
+
+
 class Direction(Enum):
     UP = 1
     DOWN = 2
@@ -78,33 +86,56 @@ class DirectionQueue:
 
 
 class Field:
-    def __init__(self, size: tuple) -> None:
+    _BORDER_WIDTH = 5
+
+    def __init__(self, size: int) -> None:
         self._size = size
 
-    def get_size(self) -> tuple:
+    def get_size(self) -> int:
         return self._size
 
     def get_overflow_position(self, pos: tuple) -> tuple:
-        return (pos[0] % self._size[0], pos[1] % self._size[1])
+        return (pos[0] % self._size, pos[1] % self._size)
 
-    def draw_block(
-        self, screen: pygame.Surface, pos: tuple, color: tuple = (255, 255, 255)
-    ):
-        block = screen.get_size()[0] // self._size[0]
-        x = pos[0] * block
-        y = pos[1] * block
-        pygame.draw.rect(screen, color, (x, y, block, block))
+    def draw_block(self, screen: pygame.Surface, pos: tuple, color: Color):
+        inner_surface = self._get_inner_surface(screen)
+        block = inner_surface.get_size()[0] // self._size
+
+        pygame.draw.rect(
+            inner_surface, color.value, (pos[0] * block, pos[1] * block, block, block)
+        )
 
     def draw(self, screen: pygame.Surface):
-        w = screen.get_size()[0]
-        pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(0, 0, w, w))
+        inner_surface = self._get_inner_surface(screen)
+
+        pygame.draw.rect(
+            screen,
+            Color.WHITE.value,
+            pygame.Rect(
+                inner_surface.get_offset()[0] - self._BORDER_WIDTH,
+                inner_surface.get_offset()[1] - self._BORDER_WIDTH,
+                inner_surface.get_width() + 2 * self._BORDER_WIDTH,
+                inner_surface.get_height() + 2 * self._BORDER_WIDTH,
+            ),
+        )
+
+        inner_surface.fill(Color.BLACK.value)
+
+    def _get_inner_surface(self, screen) -> pygame.Surface:
+        size = min(screen.get_size()) - 2 * self._BORDER_WIDTH
+        return screen.subsurface(
+            (screen.get_size()[0] - size) // 2,
+            (screen.get_size()[1] - size) // 2,
+            size,
+            size,
+        )
 
 
 class Snake:
     def __init__(self, field: Field) -> None:
         self._alive = True
         self._field = field
-        self._blocks = [(field.get_size()[0] // 2, field.get_size()[1] // 2)]
+        self._blocks = [(field.get_size() // 2, field.get_size() // 2)]
         self._dir_queue = DirectionQueue(random.choice(list(Direction)))
         print(f"Snake created: {self}")
 
@@ -131,7 +162,7 @@ class Snake:
 
     def draw(self, screen: pygame.Surface):
         for b in self._blocks:
-            self._field.draw_block(screen, b)
+            self._field.draw_block(screen, b, Color.WHITE)
 
     def __contains__(self, pos: tuple) -> bool:
         return pos in self._blocks
@@ -153,13 +184,13 @@ class Food:
     def respawn(self):
         while self._pos in self._snake:
             self._pos = (
-                random.randint(0, self._field.get_size()[0] - 1),
-                random.randint(0, self._field.get_size()[1] - 1),
+                random.randint(0, self._field.get_size() - 1),
+                random.randint(0, self._field.get_size() - 1),
             )
         print(f"Food respawned at: {self._pos}")
 
     def draw(self, screen: pygame.Surface):
-        self._field.draw_block(screen, self._pos, (0, 255, 0))
+        self._field.draw_block(screen, self._pos, Color.GREEN)
 
 
 class Game:
@@ -171,7 +202,7 @@ class Game:
     MOVEEVENT = pygame.USEREVENT + 1
 
     def __init__(self, level: Level, highest_score: int) -> None:
-        self._field = Field((20, 20))
+        self._field = Field(size=20)
         self._snake = Snake(self._field)
         self._food = Food(self._field, self._snake)
         self._level = level
@@ -204,6 +235,18 @@ class Game:
                     self._move()
 
     def draw(self, screen: pygame.Surface):
-        self._field.draw(screen)
-        self._snake.draw(screen)
-        self._food.draw(screen)
+        top_bar_height = 50
+        separator_height = 5
+
+        field_surface = screen.subsurface(
+            (
+                0,
+                top_bar_height,
+                screen.get_width(),
+                screen.get_height() - top_bar_height,
+            )
+        )
+
+        self._field.draw(field_surface)
+        self._snake.draw(field_surface)
+        self._food.draw(field_surface)
