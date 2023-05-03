@@ -1,14 +1,7 @@
 from enum import Enum
+import graphics
 import pygame
 import random
-
-
-class Color(Enum):
-    WHITE = (255, 255, 255)
-    BLACK = (0, 0, 0)
-    RED = (255, 0, 0)
-    GREEN = (0, 255, 0)
-    BLUE = (0, 0, 255)
 
 
 class Direction(Enum):
@@ -97,20 +90,20 @@ class Field:
     def get_overflow_position(self, pos: tuple) -> tuple:
         return (pos[0] % self._size, pos[1] % self._size)
 
-    def draw_block(self, screen: pygame.Surface, pos: tuple, color: Color):
-        inner_surface = self._get_inner_surface(screen)
+    def draw_block(self, surface: pygame.Surface, pos: tuple, color: graphics.Color):
+        inner_surface = self._get_inner_surface(surface)
         block = inner_surface.get_size()[0] // self._size
 
         pygame.draw.rect(
             inner_surface, color.value, (pos[0] * block, pos[1] * block, block, block)
         )
 
-    def draw(self, screen: pygame.Surface):
-        inner_surface = self._get_inner_surface(screen)
+    def draw(self, surface: pygame.Surface):
+        inner_surface = self._get_inner_surface(surface)
 
         pygame.draw.rect(
-            screen,
-            Color.WHITE.value,
+            surface,
+            graphics.Color.WHITE.value,
             pygame.Rect(
                 inner_surface.get_offset()[0] - self._BORDER_WIDTH,
                 inner_surface.get_offset()[1] - self._BORDER_WIDTH,
@@ -119,15 +112,13 @@ class Field:
             ),
         )
 
-        inner_surface.fill(Color.BLACK.value)
+        inner_surface.fill(graphics.Color.BLACK.value)
 
-    def _get_inner_surface(self, screen) -> pygame.Surface:
-        size = min(screen.get_size()) - 2 * self._BORDER_WIDTH
-        return screen.subsurface(
-            (screen.get_size()[0] - size) // 2,
-            (screen.get_size()[1] - size) // 2,
-            size,
-            size,
+    def _get_inner_surface(self, surface) -> pygame.Surface:
+        min_dimension = min(surface.get_size()) - 2 * self._BORDER_WIDTH
+        size = (min_dimension, min_dimension)
+        return surface.subsurface(
+            graphics.get_centered_offset(surface.get_size(), size), size
         )
 
 
@@ -160,9 +151,9 @@ class Snake:
     def is_alive(self) -> bool:
         return self._alive
 
-    def draw(self, screen: pygame.Surface):
+    def draw(self, surface: pygame.Surface):
         for b in self._blocks:
-            self._field.draw_block(screen, b, Color.WHITE)
+            self._field.draw_block(surface, b, graphics.Color.WHITE)
 
     def __contains__(self, pos: tuple) -> bool:
         return pos in self._blocks
@@ -189,26 +180,22 @@ class Food:
             )
         print(f"Food respawned at: {self._pos}")
 
-    def draw(self, screen: pygame.Surface):
-        self._field.draw_block(screen, self._pos, Color.GREEN)
+    def draw(self, surface: pygame.Surface):
+        self._field.draw_block(surface, self._pos, graphics.Color.GREEN)
 
 
-class TopBar:
+class GameTopBar:
     def __init__(self, highest_score: int) -> None:
         self._highest_score = highest_score
         self.score = 0
 
-    def draw(self, screen: pygame.Surface) -> None:
+    def draw(self, surface: pygame.Surface) -> None:
         text = pygame.font.Font(None, 36).render(
-            f"Score: {self.score}", True, Color.WHITE.value
+            f"Score: {self.score}", True, graphics.Color.WHITE.value
         )
 
-        screen.blit(
-            text,
-            (
-                (screen.get_width() - text.get_width()) // 2,
-                (screen.get_height() - text.get_height()) // 2,
-            ),
+        surface.blit(
+            text, graphics.get_centered_offset(surface.get_size(), text.get_size())
         )
 
 
@@ -221,7 +208,7 @@ class Game:
     MOVEEVENT = pygame.USEREVENT + 1
 
     def __init__(self, level: Level, highest_score: int) -> None:
-        self._top_bar = TopBar(highest_score)
+        self._top_bar = GameTopBar(highest_score)
         self._field = Field(size=20)
         self._snake = Snake(self._field)
         self._food = Food(self._field, self._snake)
@@ -254,20 +241,22 @@ class Game:
                 case Game.MOVEEVENT:
                     self._move()
 
-    def draw(self, screen: pygame.Surface):
+    def draw(self, surface: pygame.Surface):
         top_bar_height = 50
 
-        top_bar_surface = screen.subsurface((0, 0, screen.get_width(), top_bar_height))
-        field_surface = screen.subsurface(
+        top_bar_surface = surface.subsurface(
+            (0, 0, surface.get_width(), top_bar_height)
+        )
+        field_surface = surface.subsurface(
             (
                 0,
                 top_bar_height,
-                screen.get_width(),
-                screen.get_height() - top_bar_height,
+                surface.get_width(),
+                surface.get_height() - top_bar_height,
             )
         )
 
-        screen.fill(Color.BLACK.value)
+        surface.fill(graphics.Color.BLACK.value)
 
         self._top_bar.draw(top_bar_surface)
         self._field.draw(field_surface)

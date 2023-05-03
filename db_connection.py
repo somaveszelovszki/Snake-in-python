@@ -1,18 +1,7 @@
+import high_score
 import pymongo
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
-
-
-class HighestScore:
-    def __init__(self, name: str, highest_score: int) -> None:
-        self.name = name
-        self.highest_score = highest_score
-
-    def __str__(self) -> str:
-        return f'{{ "name": "{self.name}", "highest_score": {self.highest_score} }}'
-
-    def __repr__(self) -> str:
-        return str(self)
 
 
 class DbConnection:
@@ -30,9 +19,9 @@ class DbConnection:
     def is_connected(self) -> bool:
         return self._schema is not None
 
-    def get_highest_score(self, username) -> HighestScore:
+    def get_highest_score(self, username) -> high_score.HighScore:
         docs = list(self._schema["users"].find(self._get_user_filter(username)))
-        return self._to_highest_score(docs[0]) if len(docs) > 0 else None
+        return self._to_high_score(rank=None, item=docs[0]) if len(docs) > 0 else None
 
     def get_highest_scores(self, limit: int) -> list:
         docs = list(
@@ -42,7 +31,9 @@ class DbConnection:
             .limit(limit)
         )
 
-        return list(map(lambda item: self._to_highest_score(item), docs))
+        return [
+            self._to_high_score(rank=i + 1, item=item) for i, item in enumerate(docs)
+        ]
 
     def create_user(self, username) -> None:
         self._schema["users"].update_one(
@@ -59,5 +50,7 @@ class DbConnection:
     def _get_user_filter(self, username):
         return {"name": username}
 
-    def _to_highest_score(self, item):
-        return HighestScore(item["name"], int(item["highest_score"]))
+    def _to_high_score(self, rank, item):
+        return high_score.HighScore(
+            rank=rank, name=item["name"], score=int(item["highest_score"])
+        )

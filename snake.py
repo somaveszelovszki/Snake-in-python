@@ -1,6 +1,8 @@
 from datetime import datetime
-import db_connection as db
+from enum import Enum
+import db_connection
 import game
+import high_score
 import pygame
 import pygame_menu
 import random
@@ -18,16 +20,24 @@ class Settings:
         self.player_name = name
 
 
+class AppState(Enum):
+    INITIALIZING = 1
+    MENU = 2
+    GAME = 3
+    HIGH_SCORES = 4
+    FINISHED = 5
+
+
 class App:
     def __init__(self) -> None:
-        self._running = True
+        self._state = AppState.INITIALIZING
         self._settings = Settings()
         self._game = None
 
         random.seed(datetime.now().microsecond)
 
         with open("db_connection.txt", "r") as file:
-            self._db_conn = db.DbConnection(file.read())
+            self._db_conn = db_connection.DbConnection(file.read())
             if self._db_conn.is_connected():
                 print(self._db_conn.get_highest_scores(limit=10))
 
@@ -35,48 +45,61 @@ class App:
         pygame.font.init()
         self._screen = pygame.display.set_mode((800, 850))
         self._clock = pygame.time.Clock()
-        self._initialize_menu()
+        self._show_menu()
 
     def __del__(self):
         print("Application exited")
         pygame.quit()
 
     def is_running(self) -> bool:
-        return self._running
+        return self._state != AppState.FINISHED
 
     def loop(self) -> None:
         events = pygame.event.get()
 
         if any(e.type == pygame.QUIT for e in events):
-            self._running = False
+            self._state = AppState.FINISHED
             return
 
-        if self._menu.is_enabled():
-            self._menu.update(events)
-            if self._menu.is_enabled():
-                self._menu.draw(self._screen)
+        match self._state:
+            case AppState.MENU:
+                self._menu.update(events)
+                if self._menu is not None:
+                    self._menu.draw(self._screen)
 
-        if self._game is not None:
-            self._game.update(events)
-            self._game.draw(self._screen)
-            if not self._game.is_running():
-                self._menu.enable()
+            case AppState.GAME:
+                self._game.update(events)
+                self._game.draw(self._screen)
+                if not self._game.is_running():
+                    if (
+                        self._settings.player_name
+                        and self._db_conn
+                        and self._db_conn.is_connected()
+                    ):
+                        self._db_conn.update_highest_score(
+                            self._settings.player_name, self._game.get_score()
+                        )
 
-                if self._db_conn is not None and self._db_conn.is_connected():
-                    self._db_conn.update_highest_score(
-                        self._settings.player_name, self._game.get_score()
-                    )
+                    self._show_high_scores()
 
-                self._game = None
+            case AppState.HIGH_SCORES:
+                self._high_score_window.draw(self._screen)
+                if not self._high_score_window.is_running():
+                    self._show_menu()
 
         pygame.display.flip()
         self._clock.tick(30)
 
-    def _initialize_menu(self) -> None:
+    def _show_menu(self) -> None:
+        self._state = AppState.MENU
         self._menu = pygame_menu.Menu("Start game", 400, 300)
+        self._game = None
+        self._high_score_window = None
+
         self._menu.add.text_input(
             "Player: ", onchange=lambda text: self._settings.set_player_name(text)
         )
+
         self._menu.add.selector(
             "Level: ",
             [
@@ -86,20 +109,39 @@ class App:
             ],
             onchange=lambda _, level: self._settings.set_level(level),
         )
-        self._menu.add.button("Play", lambda: self._initialize_game())
+
+        self._menu.add.button("Play", lambda: self._show_game())
+        self._menu.add.button("High scores", lambda: self._show_high_scores())
         self._menu.add.button("Quit", pygame_menu.events.EXIT)
 
-    def _initialize_game(self) -> None:
-        self._menu.disable()
-
-        if self._db_conn is not None and self._db_conn.is_connected():
+    def _show_game(self) -> None:
+        if (
+            self._settings.player_name
+            and self._db_conn
+            and self._db_conn.is_connected()
+        ):
             self._db_conn.create_user(self._settings.player_name)
             highest_score = self._db_conn.get_highest_score(self._settings.player_name)
         else:
             highest_score = 0
 
-        self._game = game.Game(self._settings.level, highest_score)
         pygame.time.set_timer(game.Game.MOVEEVENT, 250 // self._settings.level.value)
+
+        self._state = AppState.GAME
+        self._menu = None
+        self._game = game.Game(self._settings.level, highest_score)
+        self._high_score_window = None
+
+    def _show_high_scores(self) -> None:
+        if self._db_conn and self._db_conn.is_connected():
+            high_scores = self._db_conn.get_highest_scores(limit=10)
+        else:
+            high_scores = []
+
+        self._state = AppState.HIGH_SCORES
+        self._menu = None
+        self._game = None
+        self._high_score_window = high_score.HighScoreWindow(high_scores)
 
 
 def main() -> None:
