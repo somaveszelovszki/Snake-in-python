@@ -36,7 +36,6 @@ class App:
         self._screen = pygame.display.set_mode((800, 850))
         self._clock = pygame.time.Clock()
         self._initialize_menu()
-        self._initialize_game()
 
     def __del__(self):
         print("Application exited")

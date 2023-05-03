@@ -193,6 +193,25 @@ class Food:
         self._field.draw_block(screen, self._pos, Color.GREEN)
 
 
+class TopBar:
+    def __init__(self, highest_score: int) -> None:
+        self._highest_score = highest_score
+        self.score = 0
+
+    def draw(self, screen: pygame.Surface) -> None:
+        text = pygame.font.Font(None, 36).render(
+            f"Score: {self.score}", True, Color.WHITE.value
+        )
+
+        screen.blit(
+            text,
+            (
+                (screen.get_width() - text.get_width()) // 2,
+                (screen.get_height() - text.get_height()) // 2,
+            ),
+        )
+
+
 class Game:
     class Level(Enum):
         EASY = 1
@@ -202,14 +221,14 @@ class Game:
     MOVEEVENT = pygame.USEREVENT + 1
 
     def __init__(self, level: Level, highest_score: int) -> None:
+        self._top_bar = TopBar(highest_score)
         self._field = Field(size=20)
         self._snake = Snake(self._field)
         self._food = Food(self._field, self._snake)
         self._level = level
-        self._highest_score = highest_score
 
     def get_score(self) -> int:
-        return len(self._snake) * self._level.value
+        return (len(self._snake) - 1) * self._level.value
 
     def is_running(self) -> bool:
         return self._snake.is_alive()
@@ -219,6 +238,7 @@ class Game:
 
         if self._food._pos == self._snake.head():
             self._food.respawn()
+            self._top_bar.score = self.get_score()
 
     def update(self, events) -> None:
         for event in events:
@@ -236,8 +256,8 @@ class Game:
 
     def draw(self, screen: pygame.Surface):
         top_bar_height = 50
-        separator_height = 5
 
+        top_bar_surface = screen.subsurface((0, 0, screen.get_width(), top_bar_height))
         field_surface = screen.subsurface(
             (
                 0,
@@ -247,6 +267,9 @@ class Game:
             )
         )
 
+        screen.fill(Color.BLACK.value)
+
+        self._top_bar.draw(top_bar_surface)
         self._field.draw(field_surface)
         self._snake.draw(field_surface)
         self._food.draw(field_surface)
