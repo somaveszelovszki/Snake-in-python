@@ -28,13 +28,29 @@ class HighScore:
 
 
 class HighScoreTopBar:
-    def __init__(self) -> None:
+    def __init__(self, height: int) -> None:
+        self._height = height
+        self._back_button = graphics.Button(
+            offset=(10, 0),
+            size=(100, self._height),
+            text="Back",
+            background_color=graphics.Color.BLACK,
+            hover_color=graphics.Color.WHITE,
+            text_color=graphics.Color.WHITE,
+        )
+
         self._back_navigation_requested = False
+
+    def get_height(self) -> int:
+        return self._height
 
     def back_navigation_requested(self) -> bool:
         return self._back_navigation_requested
 
     def draw(self, surface: pygame.Surface):
+        if self._back_button.draw(surface):
+            self._back_navigation_requested = True
+
         text = pygame.font.Font(None, 36).render(
             f"High scores", True, graphics.Color.WHITE.value
         )
@@ -69,7 +85,7 @@ class HighScoreTable:
 
 class HighScoreWindow:
     def __init__(self, high_scores: list) -> None:
-        self._top_bar = HighScoreTopBar()
+        self._top_bar = HighScoreTopBar(50)
         self._table = HighScoreTable(high_scores, row_size=(400, 50))
 
     def is_running(self) -> bool:
@@ -78,9 +94,10 @@ class HighScoreWindow:
     def draw(self, surface: pygame.Surface):
         surface.fill(graphics.Color.BLACK.value)
 
-        top_bar_height = 50
-
-        content_size = (surface.get_width(), top_bar_height + self._table.get_size()[1])
+        content_size = (
+            surface.get_width(),
+            self._top_bar.get_height() + self._table.get_size()[1],
+        )
         content_surface = surface.subsurface(
             (
                 graphics.get_centered_offset(surface.get_size(), content_size),
@@ -89,15 +106,15 @@ class HighScoreWindow:
         )
 
         top_bar_surface = content_surface.subsurface(
-            (0, 0, content_surface.get_width(), top_bar_height)
+            (0, 0, content_surface.get_width(), self._top_bar.get_height())
         )
 
         table_surface = content_surface.subsurface(
             (
                 0,
-                top_bar_height,
+                self._top_bar.get_height(),
                 content_surface.get_width(),
-                content_surface.get_height() - top_bar_height,
+                content_surface.get_height() - self._top_bar.get_height(),
             )
         )
 

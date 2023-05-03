@@ -2,6 +2,7 @@ from datetime import datetime
 from enum import Enum
 import db_connection
 import game
+import graphics
 import high_score
 import pygame
 import pygame_menu
@@ -65,6 +66,7 @@ class App:
             case AppState.MENU:
                 self._menu.update(events)
                 if self._menu is not None:
+                    self._screen.fill(graphics.Color.BLACK.value)
                     self._menu.draw(self._screen)
 
             case AppState.GAME:
