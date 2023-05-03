@@ -102,6 +102,7 @@ class Field:
 
 class Snake:
     def __init__(self, field: Field) -> None:
+        self._alive = True
         self.field = field
         self._blocks = [(field.size[0] // 2, field.size[1] // 2)]
         self._dir_queue = DirectionQueue(random.choice(list(Direction)))
@@ -119,17 +120,14 @@ class Snake:
         if new_head_pos != food_pos:
             self._blocks.pop()
 
+        if self.head() in self._blocks[1 : len(self._blocks)]:
+            self._alive = False
+
     def head(self) -> tuple:
         return tuple(list(self._blocks[0]))
 
-    def has_loop(self) -> bool:
-        return self.head() in self._blocks[1 : len(self._blocks)]
-
-    def __len__(self) -> int:
-        return len(self._blocks)
-
     def is_alive(self) -> bool:
-        return self._blocks.count(self._blocks[0]) == 1
+        return self._alive
 
     def draw(self, screen: pygame.Surface):
         for b in self._blocks:
@@ -137,6 +135,9 @@ class Snake:
 
     def __contains__(self, pos: tuple) -> bool:
         return pos in self._blocks
+
+    def __len__(self) -> int:
+        return len(self._blocks)
 
     def __str__(self) -> str:
         return '{{ "blocks": {}, "dir_queue": {} }}'.format(
@@ -177,25 +178,33 @@ class Game:
         self._food = Food(self._field, self._snake)
         self._level = level
 
-    def change_snake_direction(self, dir: Direction):
-        self._snake.change_direction(dir)
-
     def get_score(self) -> int:
         return len(self._snake) * self._level.value
 
-    def move(self) -> bool:
-        self._snake.move(self._food.pos)
+    def is_running(self) -> bool:
+        return self._snake.is_alive()
 
-        if self._snake.has_loop():
-            print("Snake has a loop")
-            return False
+    def _move(self) -> None:
+        self._snake.move(self._food.pos)
 
         if self._food.pos == self._snake.head():
             self._food.respawn()
 
-        return True
+    def update(self, events) -> None:
+        for event in events:
+            match event.type:
+                case pygame.QUIT:
+                    self._running = False
 
-    def render(self, screen: pygame.Surface):
+                case pygame.KEYDOWN:
+                    dir = direction(event.key)
+                    if dir != None:
+                        self._snake.change_direction(dir)
+
+                case Game.MOVEEVENT:
+                    self._move()
+
+    def draw(self, screen: pygame.Surface):
         self._field.draw(screen)
         self._snake.draw(screen)
         self._food.draw(screen)
@@ -213,66 +222,78 @@ class Settings:
         self.player_name = name
 
 
-settings = Settings()
+class App:
+    def __init__(self) -> None:
+        self._running = True
+        self._settings = Settings()
+        self._game = None
 
+        random.seed(datetime.now().microsecond)
+        db_conn = db.DbConnection()
+        print(db_conn.get_highest_scores(limit=10))
 
-def run_game(screen: pygame.Surface) -> None:
-    clock = pygame.time.Clock()
-    running = True
-    game = Game(settings.level)
-    pygame.time.set_timer(Game.MOVEEVENT, 250 // settings.level.value)
+        pygame.init()
+        self._screen = pygame.display.set_mode((800, 800))
+        self._clock = pygame.time.Clock()
+        self._initialize_menu()
 
-    while running:
-        for event in pygame.event.get():
-            match event.type:
-                case pygame.QUIT:
-                    running = False
+    def __del__(self):
+        print("Application exited")
+        pygame.quit()
 
-                case pygame.KEYDOWN:
-                    dir = direction(event.key)
-                    if dir != None:
-                        game.change_snake_direction(dir)
+    def is_running(self) -> bool:
+        return self._running
 
-                case Game.MOVEEVENT:
-                    success = game.move()
-                    if not success:
-                        running = False
+    def loop(self) -> None:
+        events = pygame.event.get()
 
-        game.render(screen)
+        if any(e.type == pygame.QUIT for e in events):
+            self._running = False
+            return
+
+        if self._menu.is_enabled():
+            self._menu.update(events)
+            if self._menu.is_enabled():
+                self._menu.draw(self._screen)
+
+        if self._game != None:
+            self._game.update(events)
+            self._game.draw(self._screen)
+            if not self._game.is_running():
+                self._menu.enable()
+                self._game = None
+
         pygame.display.flip()
-        clock.tick(30)
+        self._clock.tick(30)
 
-    print("Game finished. Score: {}".format(game.get_score()))
-    pygame.quit()
+    def _initialize_menu(self) -> None:
+        self._menu = pygame_menu.Menu("Start game", 400, 300)
+        self._menu.add.text_input(
+            "Player: ", onchange=lambda text: self._settings.set_player_name(text)
+        )
+        self._menu.add.selector(
+            "Level: ",
+            [
+                ("Easy", Game.Level.EASY),
+                ("Medium", Game.Level.MEDIUM),
+                ("Hard", Game.Level.HARD),
+            ],
+            onchange=lambda _, level: self._settings.set_level(level),
+        )
+        self._menu.add.button("Play", lambda: self._initialize_game())
+        self._menu.add.button("Quit", pygame_menu.events.EXIT)
 
-
-def show_menu(screen: pygame.Surface) -> None:
-    menu = pygame_menu.Menu("Start game", 400, 300)
-    menu.add.text_input(
-        "Player: ", onchange=lambda text: settings.set_player_name(text)
-    )
-    menu.add.selector(
-        "Level: ",
-        [
-            ("Easy", Game.Level.EASY),
-            ("Medium", Game.Level.MEDIUM),
-            ("Hard", Game.Level.HARD),
-        ],
-        onchange=lambda _, level: settings.set_level(level),
-    )
-    menu.add.button("Play", lambda: run_game(screen))
-    menu.add.button("Quit", pygame_menu.events.EXIT)
-    menu.mainloop(screen)
+    def _initialize_game(self) -> None:
+        self._menu.disable()
+        self._game = Game(self._settings.level)
+        pygame.time.set_timer(Game.MOVEEVENT, 250 // self._settings.level.value)
 
 
 def main() -> None:
-    random.seed(datetime.now().microsecond)
-    db_conn = db.DbConnection()
-    print(db_conn.getHighestScores())
+    app = App()
 
-    pygame.init()
-    screen = pygame.display.set_mode((800, 800))
-    show_menu(screen)
+    while app.is_running():
+        app.loop()
 
 
 if __name__ == "__main__":
