@@ -16,7 +16,7 @@ class Direction(Enum):
             case Direction.LEFT | Direction.RIGHT:
                 return (1, 0)
             case _:
-                raise Exception("Unknown direction: {}".format(self.name))
+                raise Exception(f"Unknown direction: {self.name}")
 
     def apply(self, pos: tuple) -> tuple:
         match self:
@@ -29,7 +29,7 @@ class Direction(Enum):
             case Direction.RIGHT:
                 return (pos[0] + 1, pos[1])
             case _:
-                raise Exception("Unknown direction: {}".format(self.name))
+                raise Exception(f"Unknown direction: {self.name}")
 
 
 def direction(key: int) -> Direction:
@@ -74,7 +74,7 @@ class DirectionQueue:
             return None
 
     def __str__(self) -> str:
-        return '{{ "current": {}, "queue": {} }}'.format(self._current, self._queue)
+        return f'{{ "current": {self._current}, "queue": {self._queue} }}'
 
 
 class Field:
@@ -103,7 +103,7 @@ class Snake:
         self.field = field
         self._blocks = [(field.size[0] // 2, field.size[1] // 2)]
         self._dir_queue = DirectionQueue(random.choice(list(Direction)))
-        print("Snake created: {}".format(self))
+        print(f"Snake created: {self}")
 
     def change_direction(self, dir: Direction):
         self._dir_queue.push(dir)
@@ -137,9 +137,7 @@ class Snake:
         return len(self._blocks)
 
     def __str__(self) -> str:
-        return '{{ "blocks": {}, "dir_queue": {} }}'.format(
-            self._blocks, self._dir_queue
-        )
+        return f'{{ "blocks": {self._blocks}, "dir_queue": {self._dir_queue} }}'
 
 
 class Food:
@@ -155,7 +153,7 @@ class Food:
                 random.randint(0, self.field.size[0] - 1),
                 random.randint(0, self.field.size[1] - 1),
             )
-        print("Food respawned at: {}".format(self.pos))
+        print(f"Food respawned at: {self.pos}")
 
     def draw(self, screen: pygame.Surface):
         self.field.draw_block(screen, self.pos, (0, 255, 0))

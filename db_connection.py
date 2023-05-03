@@ -9,9 +9,7 @@ class HighestScore:
         self.highest_score = highest_score
 
     def __str__(self) -> str:
-        return '{{ "name": "{}", "highest_score": {} }}'.format(
-            self.name, self.highest_score
-        )
+        return f'{{ "name": "{self.name}", "highest_score": {self.highest_score} }}'
 
     def __repr__(self) -> str:
         return str(self)

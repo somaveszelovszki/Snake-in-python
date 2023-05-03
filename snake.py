@@ -32,6 +32,7 @@ class App:
                 print(self._db_conn.get_highest_scores(limit=10))
 
         pygame.init()
+        pygame.font.init()
         self._screen = pygame.display.set_mode((800, 800))
         self._clock = pygame.time.Clock()
         self._initialize_menu()
