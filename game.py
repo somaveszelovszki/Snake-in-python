@@ -79,15 +79,18 @@ class DirectionQueue:
 
 class Field:
     def __init__(self, size: tuple) -> None:
-        self.size = size
+        self._size = size
+
+    def get_size(self) -> tuple:
+        return self._size
 
     def get_overflow_position(self, pos: tuple) -> tuple:
-        return (pos[0] % self.size[0], pos[1] % self.size[1])
+        return (pos[0] % self._size[0], pos[1] % self._size[1])
 
     def draw_block(
         self, screen: pygame.Surface, pos: tuple, color: tuple = (255, 255, 255)
     ):
-        block = screen.get_size()[0] // self.size[0]
+        block = screen.get_size()[0] // self._size[0]
         x = pos[0] * block
         y = pos[1] * block
         pygame.draw.rect(screen, color, (x, y, block, block))
@@ -100,8 +103,8 @@ class Field:
 class Snake:
     def __init__(self, field: Field) -> None:
         self._alive = True
-        self.field = field
-        self._blocks = [(field.size[0] // 2, field.size[1] // 2)]
+        self._field = field
+        self._blocks = [(field.get_size()[0] // 2, field.get_size()[1] // 2)]
         self._dir_queue = DirectionQueue(random.choice(list(Direction)))
         print(f"Snake created: {self}")
 
@@ -109,7 +112,7 @@ class Snake:
         self._dir_queue.push(dir)
 
     def move(self, food_pos: tuple) -> None:
-        new_head_pos = self.field.get_overflow_position(
+        new_head_pos = self._field.get_overflow_position(
             self._dir_queue.pop().apply(self._blocks[0])
         )
 
@@ -128,7 +131,7 @@ class Snake:
 
     def draw(self, screen: pygame.Surface):
         for b in self._blocks:
-            self.field.draw_block(screen, b)
+            self._field.draw_block(screen, b)
 
     def __contains__(self, pos: tuple) -> bool:
         return pos in self._blocks
@@ -142,21 +145,21 @@ class Snake:
 
 class Food:
     def __init__(self, field: Field, snake: Snake) -> None:
-        self.field = field
-        self.snake = snake
-        self.pos = self.snake.head()
+        self._field = field
+        self._snake = snake
+        self._pos = self._snake.head()
         self.respawn()
 
     def respawn(self):
-        while self.pos in self.snake:
-            self.pos = (
-                random.randint(0, self.field.size[0] - 1),
-                random.randint(0, self.field.size[1] - 1),
+        while self._pos in self._snake:
+            self._pos = (
+                random.randint(0, self._field.get_size()[0] - 1),
+                random.randint(0, self._field.get_size()[1] - 1),
             )
-        print(f"Food respawned at: {self.pos}")
+        print(f"Food respawned at: {self._pos}")
 
     def draw(self, screen: pygame.Surface):
-        self.field.draw_block(screen, self.pos, (0, 255, 0))
+        self._field.draw_block(screen, self._pos, (0, 255, 0))
 
 
 class Game:
@@ -181,9 +184,9 @@ class Game:
         return self._snake.is_alive()
 
     def _move(self) -> None:
-        self._snake.move(self._food.pos)
+        self._snake.move(self._food._pos)
 
-        if self._food.pos == self._snake.head():
+        if self._food._pos == self._snake.head():
             self._food.respawn()
 
     def update(self, events) -> None:
