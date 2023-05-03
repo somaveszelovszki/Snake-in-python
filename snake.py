@@ -60,7 +60,7 @@ class DirectionQueue:
     def pop(self) -> Direction:
         if self._queue:
             last_idx = self._get_last_valid_index()
-            if last_idx != None:
+            if last_idx is not None:
                 self._current = self._queue[last_idx]
                 del self._queue[: last_idx + 1]
 
@@ -172,11 +172,12 @@ class Game:
 
     MOVEEVENT = pygame.USEREVENT + 1
 
-    def __init__(self, level: Level) -> None:
+    def __init__(self, level: Level, highest_score: int) -> None:
         self._field = Field((20, 20))
         self._snake = Snake(self._field)
         self._food = Food(self._field, self._snake)
         self._level = level
+        self._highest_score = highest_score
 
     def get_score(self) -> int:
         return len(self._snake) * self._level.value
@@ -198,7 +199,7 @@ class Game:
 
                 case pygame.KEYDOWN:
                     dir = direction(event.key)
-                    if dir != None:
+                    if dir is not None:
                         self._snake.change_direction(dir)
 
                 case Game.MOVEEVENT:
@@ -229,8 +230,11 @@ class App:
         self._game = None
 
         random.seed(datetime.now().microsecond)
-        db_conn = db.DbConnection()
-        print(db_conn.get_highest_scores(limit=10))
+
+        with open("db_connection.txt", "r") as file:
+            self._db_conn = db.DbConnection(file.read())
+            if self._db_conn.is_connected():
+                print(self._db_conn.get_highest_scores(limit=10))
 
         pygame.init()
         self._screen = pygame.display.set_mode((800, 800))
@@ -256,11 +260,17 @@ class App:
             if self._menu.is_enabled():
                 self._menu.draw(self._screen)
 
-        if self._game != None:
+        if self._game is not None:
             self._game.update(events)
             self._game.draw(self._screen)
             if not self._game.is_running():
                 self._menu.enable()
+
+                if self._db_conn is not None and self._db_conn.is_connected():
+                    self._db_conn.update_highest_score(
+                        self._settings.player_name, self._game.get_score()
+                    )
+
                 self._game = None
 
         pygame.display.flip()
@@ -285,7 +295,14 @@ class App:
 
     def _initialize_game(self) -> None:
         self._menu.disable()
-        self._game = Game(self._settings.level)
+
+        if self._db_conn is not None and self._db_conn.is_connected():
+            self._db_conn.create_user(self._settings.player_name)
+            highest_score = self._db_conn.get_highest_score(self._settings.player_name)
+        else:
+            highest_score = 0
+
+        self._game = Game(self._settings.level, highest_score)
         pygame.time.set_timer(Game.MOVEEVENT, 250 // self._settings.level.value)
 
 
