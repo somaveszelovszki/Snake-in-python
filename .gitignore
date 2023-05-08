@@ -1,6 +1,5 @@
 .vscode/
 __pycache__/
-db_connection.txt
 build/
 dist/
 snake.spec

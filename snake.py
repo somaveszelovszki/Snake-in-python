@@ -8,6 +8,11 @@ import pygame
 import pygame_menu
 import random
 
+# The following file contains sensitive information, therefore it is not added to the repository.
+# If you would like to provide your own MongoDB connection,
+# please implement the db_credentials module according to the db_credentials.py.sample file.
+import db_credentials
+
 
 class Settings:
     def __init__(self) -> None:
@@ -37,15 +42,16 @@ class App:
 
         random.seed(datetime.now().microsecond)
 
-        with open("db_connection.txt", "r") as file:
-            self._db_conn = db_connection.DbConnection(file.read())
-            if self._db_conn.is_connected():
-                print(self._db_conn.get_highest_scores(limit=10))
+        self._db_conn = db_connection.DbConnection(
+            db_credentials.DB_CONNECTION_STRING)
+        if self._db_conn.is_connected():
+            print(self._db_conn.get_highest_scores(limit=10))
 
         pygame.init()
         pygame.font.init()
         self._screen = pygame.display.set_mode((800, 850))
         self._clock = pygame.time.Clock()
+        pygame.display.set_caption('Snake')
         self._show_menu()
 
     def __del__(self):
@@ -73,11 +79,7 @@ class App:
                 self._game.update(events)
                 self._game.draw(self._screen)
                 if not self._game.is_running():
-                    if (
-                        self._settings.player_name
-                        and self._db_conn
-                        and self._db_conn.is_connected()
-                    ):
+                    if (self._settings.player_name and self._db_conn.is_connected()):
                         self._db_conn.update_highest_score(
                             self._settings.player_name, self._game.get_score()
                         )
@@ -117,17 +119,15 @@ class App:
         self._menu.add.button("Quit", pygame_menu.events.EXIT)
 
     def _show_game(self) -> None:
-        if (
-            self._settings.player_name
-            and self._db_conn
-            and self._db_conn.is_connected()
-        ):
+        if (self._settings.player_name and self._db_conn.is_connected()):
             self._db_conn.create_user(self._settings.player_name)
-            highest_score = self._db_conn.get_highest_score(self._settings.player_name)
+            highest_score = self._db_conn.get_highest_score(
+                self._settings.player_name)
         else:
             highest_score = 0
 
-        pygame.time.set_timer(game.Game.MOVEEVENT, 250 // self._settings.level.value)
+        pygame.time.set_timer(game.Game.MOVEEVENT, 250 //
+                              self._settings.level.value)
 
         self._state = AppState.GAME
         self._menu = None
@@ -135,7 +135,7 @@ class App:
         self._high_score_window = None
 
     def _show_high_scores(self) -> None:
-        if self._db_conn and self._db_conn.is_connected():
+        if self._db_conn.is_connected():
             high_scores = self._db_conn.get_highest_scores(limit=10)
         else:
             high_scores = []
