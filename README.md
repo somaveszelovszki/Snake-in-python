@@ -9,4 +9,4 @@ External packages used in the project:
 
 <img src="resources/feature-praphic.png" width="300">
 
-Find out more about my projects at [soma.veszelovszki.hu](soma.veszelovszki.hu)
+Find out more about my projects at [soma.veszelovszki.hu](https://soma.veszelovszki.hu)
