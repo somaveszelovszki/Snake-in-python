@@ -4,12 +4,14 @@ import pygame
 import random
 
 
+# Represents a direction in which the snake can move.
 class Direction(Enum):
     UP = 1
     DOWN = 2
     LEFT = 3
     RIGHT = 4
 
+    # Gets the axis of movement (either x or y).
     def axis(self) -> tuple:
         match self:
             case Direction.UP | Direction.DOWN:
@@ -19,6 +21,7 @@ class Direction(Enum):
             case _:
                 raise Exception(f"Unknown direction: {self.name}")
 
+    # Transforms a position according to this direction.
     def apply(self, pos: tuple) -> tuple:
         match self:
             case Direction.UP:
@@ -33,6 +36,7 @@ class Direction(Enum):
                 raise Exception(f"Unknown direction: {self.name}")
 
 
+# Converts a pressed key value to a direction.
 def direction(key: int) -> Direction:
     match key:
         case pygame.K_UP | pygame.K_w:
@@ -47,6 +51,13 @@ def direction(key: int) -> Direction:
             return None
 
 
+# Smart queue implementation for storing the direction user commands.
+# Handles corner cases such as:
+#   - current direction is pressed again
+#   - opposite direction is pressed
+#   - direction is pressed multiple times in the same iteration
+#   - multiple valid directions are pressed in the same iteration
+#   - directions are pressed in the same iterations that can be executed in sequence
 class DirectionQueue:
     def __init__(self, current: Direction) -> None:
         self._current = current
@@ -78,6 +89,7 @@ class DirectionQueue:
         return f'{{ "current": {self._current}, "queue": {self._queue} }}'
 
 
+# Represents the game field.
 class Field:
     _BORDER_WIDTH = 5
 
@@ -95,7 +107,8 @@ class Field:
         block = inner_surface.get_size()[0] // self._size
 
         pygame.draw.rect(
-            inner_surface, color.value, (pos[0] * block, pos[1] * block, block, block)
+            inner_surface, color.value, (pos[0] *
+                                         block, pos[1] * block, block, block)
         )
 
     def draw(self, surface: pygame.Surface):
@@ -122,6 +135,7 @@ class Field:
         )
 
 
+# Represents the snake.
 class Snake:
     def __init__(self, field: Field) -> None:
         self._alive = True
@@ -142,7 +156,7 @@ class Snake:
         if new_head_pos != food_pos:
             self._blocks.pop()
 
-        if self.head() in self._blocks[1 : len(self._blocks)]:
+        if self.head() in self._blocks[1: len(self._blocks)]:
             self._alive = False
 
     def head(self) -> tuple:
@@ -165,6 +179,7 @@ class Snake:
         return f'{{ "blocks": {self._blocks}, "dir_queue": {self._dir_queue} }}'
 
 
+# Represents the food target.
 class Food:
     def __init__(self, field: Field, snake: Snake) -> None:
         self._field = field
@@ -184,6 +199,7 @@ class Food:
         self._field.draw_block(surface, self._pos, graphics.Color.GREEN)
 
 
+# Implements the drawable top bar of the game.
 class GameTopBar:
     def __init__(self, highest_score: int) -> None:
         self._highest_score = highest_score
@@ -195,10 +211,13 @@ class GameTopBar:
         )
 
         surface.blit(
-            text, graphics.get_centered_offset(surface.get_size(), text.get_size())
+            text, graphics.get_centered_offset(
+                surface.get_size(), text.get_size())
         )
 
 
+# Represents the game, responsible for instantiating the field, the snake and the food target,
+# and drawing the game components on the screen.
 class Game:
     class Level(Enum):
         EASY = 1

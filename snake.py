@@ -14,6 +14,7 @@ import random
 import db_credentials
 
 
+# Stores settings that the user can change in the main menu.
 class Settings:
     def __init__(self) -> None:
         self.level = game.Game.Level.EASY
@@ -26,14 +27,17 @@ class Settings:
         self.player_name = name
 
 
+# Represents a state of the application.
 class AppState(Enum):
-    INITIALIZING = 1
-    MENU = 2
-    GAME = 3
-    HIGH_SCORES = 4
-    FINISHED = 5
+    INITIALIZING = 1    # App is initializing
+    MENU = 2            # Main menu is shown
+    GAME = 3            # Game is ongoing
+    HIGH_SCORES = 4     # High scores are displayed
+    EXIT_REQUESTED = 5  # User requested to exit the app
 
 
+# Responsible for instantiating the main components,
+# drawing the active window and handling user actions.
 class App:
     def __init__(self) -> None:
         self._state = AppState.INITIALIZING
@@ -59,13 +63,15 @@ class App:
         pygame.quit()
 
     def is_running(self) -> bool:
-        return self._state != AppState.FINISHED
+        return self._state != AppState.EXIT_REQUESTED
 
+    # This function is executed periodically.
+    # It handles user actions and draws the active window on the display.
     def loop(self) -> None:
         events = pygame.event.get()
 
         if any(e.type == pygame.QUIT for e in events):
-            self._state = AppState.FINISHED
+            self._state = AppState.EXIT_REQUESTED
             return
 
         match self._state:
@@ -94,6 +100,7 @@ class App:
         pygame.display.flip()
         self._clock.tick(30)
 
+    # Initializes the main menu and sets it as the active window.
     def _show_menu(self) -> None:
         self._state = AppState.MENU
         self._menu = pygame_menu.Menu("Start game", 400, 300)
@@ -118,6 +125,7 @@ class App:
         self._menu.add.button("High scores", lambda: self._show_high_scores())
         self._menu.add.button("Quit", pygame_menu.events.EXIT)
 
+    # Initializes the game and sets it as the active window.
     def _show_game(self) -> None:
         if (self._settings.player_name and self._db_conn.is_connected()):
             self._db_conn.create_user(self._settings.player_name)
@@ -134,6 +142,7 @@ class App:
         self._game = game.Game(self._settings.level, highest_score)
         self._high_score_window = None
 
+    # Initializes the high scores window and sets it as the active window.
     def _show_high_scores(self) -> None:
         if self._db_conn.is_connected():
             high_scores = self._db_conn.get_highest_scores(limit=10)

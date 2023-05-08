@@ -2,6 +2,7 @@ from enum import Enum
 import pygame
 
 
+# Represents a color.
 class Color(Enum):
     WHITE = (255, 255, 255)
     BLACK = (0, 0, 0)
@@ -10,6 +11,7 @@ class Color(Enum):
     BLUE = (0, 0, 255)
 
 
+# Calculates the offset needed for centering a rectangle in another one.
 def get_centered_offset(parent_size: tuple, child_size: tuple) -> tuple:
     return (
         (parent_size[0] - child_size[0]) // 2,
@@ -17,6 +19,7 @@ def get_centered_offset(parent_size: tuple, child_size: tuple) -> tuple:
     )
 
 
+# Implements a drawable button with configurable text and colors.
 class Button:
     def __init__(
         self,
@@ -34,18 +37,24 @@ class Button:
         self.text_color = text_color
         self._pressed = False
 
+    # Draws the button on the surface.
+    # @returns True exactly once for every button click, False otherwise.
     def draw(self, surface: pygame.Surface) -> bool:
         prev_pressed = self._pressed
         self._draw_background(surface)
 
-        text = pygame.font.Font(None, 36).render(self.text, True, self.text_color.value)
+        text = pygame.font.Font(None, 36).render(
+            self.text, True, self.text_color.value)
         text_offset = get_centered_offset(self._rect.size, text.get_size())
         surface.blit(
-            text, (self._rect.x + text_offset[0], self._rect.y + text_offset[1])
+            text, (self._rect.x + text_offset[0],
+                   self._rect.y + text_offset[1])
         )
 
         return not prev_pressed and self._pressed
 
+    # Draws the background of the button.
+    # The background color depends on whether the is hovered or clicked.
     def _draw_background(self, surface: pygame.Surface) -> None:
         abs_offset = surface.get_abs_offset()
         abs_rect = pygame.Rect(

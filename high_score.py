@@ -2,6 +2,7 @@ import graphics
 import pygame
 
 
+# Stores the high-score information for a user.
 class HighScore:
     def __init__(self, rank: int, name: str, score: int) -> None:
         self.rank = rank
@@ -27,6 +28,7 @@ class HighScore:
         )
 
 
+# Implements a drawable top bar for the high-score window.
 class HighScoreTopBar:
     def __init__(self, height: int) -> None:
         self._height = height
@@ -56,10 +58,12 @@ class HighScoreTopBar:
         )
 
         surface.blit(
-            text, graphics.get_centered_offset(surface.get_size(), text.get_size())
+            text, graphics.get_centered_offset(
+                surface.get_size(), text.get_size())
         )
 
 
+# Implements a drawable high-score table.
 class HighScoreTable:
     def __init__(self, high_scores: list, row_size: tuple) -> None:
         self._high_scores = high_scores
@@ -76,13 +80,16 @@ class HighScoreTable:
         for i, high_score in enumerate(self._high_scores):
             offset = (
                 (surface.get_width() - self._row_size[0]) // 2,
-                (surface.get_height() - self._row_size[1] * len(self._high_scores)) // 2
+                (surface.get_height() -
+                 self._row_size[1] * len(self._high_scores)) // 2
                 + i * self._row_size[1],
             )
 
             high_score.draw(surface.subsurface(offset, self._row_size))
 
 
+# Implements the high-score window that instantiates the top bar and the table,
+# and draws them on the screen.
 class HighScoreWindow:
     def __init__(self, high_scores: list) -> None:
         self._top_bar = HighScoreTopBar(50)

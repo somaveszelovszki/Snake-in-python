@@ -4,6 +4,8 @@ from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 
 
+# Maintains connection to the background MongoDB database,
+# and provides a high-level API for accessing it.
 class DbConnection:
     def __init__(self, connection_string: str) -> None:
         client = MongoClient(connection_string, server_api=ServerApi("1"))
@@ -20,7 +22,8 @@ class DbConnection:
         return self._schema is not None
 
     def get_highest_score(self, username) -> high_score.HighScore:
-        docs = list(self._schema["users"].find(self._get_user_filter(username)))
+        docs = list(self._schema["users"].find(
+            self._get_user_filter(username)))
         return self._to_high_score(rank=None, item=docs[0]) if len(docs) > 0 else None
 
     def get_highest_scores(self, limit: int) -> list:
