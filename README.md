@@ -1,4 +1,4 @@
-The popular Snake game implemented in Python.
+The popular Snake game implemented in Python, with 3 difficulty levels and an online database for the high-scores of all players. 
 
 External packages used in the project:
 
